@@ -24,6 +24,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useTrustedContacts } from '@/hooks/useTrustedContacts';
 import { useEvents } from '@/hooks/useEvents';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { VerifiedPersonsManager } from '@/components/face-detection';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -252,6 +253,9 @@ export default function Settings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Verified Persons */}
+        <VerifiedPersonsManager />
 
         {/* Preferences */}
         <Card className="border-border/50">

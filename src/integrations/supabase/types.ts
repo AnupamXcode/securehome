@@ -110,6 +110,39 @@ export type Database = {
         }
         Relationships: []
       }
+      intruder_logs: {
+        Row: {
+          action_taken: string | null
+          created_at: string
+          detected_at: string
+          face_descriptor: Json | null
+          id: string
+          photo_url: string | null
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string
+          detected_at?: string
+          face_descriptor?: Json | null
+          id?: string
+          photo_url?: string | null
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string
+          detected_at?: string
+          face_descriptor?: Json | null
+          id?: string
+          photo_url?: string | null
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           alerts_enabled: boolean
@@ -182,38 +215,85 @@ export type Database = {
         }
         Relationships: []
       }
+      verified_persons: {
+        Row: {
+          created_at: string
+          face_descriptor: Json
+          id: string
+          name: string
+          photo_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          face_descriptor: Json
+          id?: string
+          name: string
+          photo_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          face_descriptor?: Json
+          id?: string
+          name?: string
+          photo_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       visitors: {
         Row: {
           created_at: string
           detected_at: string
           entry_point: string
+          face_match_confidence: number | null
           id: string
+          matched_person_id: string | null
           snapshot_url: string | null
           status: string
           user_id: string
           verified_at: string | null
+          video_url: string | null
         }
         Insert: {
           created_at?: string
           detected_at?: string
           entry_point?: string
+          face_match_confidence?: number | null
           id?: string
+          matched_person_id?: string | null
           snapshot_url?: string | null
           status?: string
           user_id: string
           verified_at?: string | null
+          video_url?: string | null
         }
         Update: {
           created_at?: string
           detected_at?: string
           entry_point?: string
+          face_match_confidence?: number | null
           id?: string
+          matched_person_id?: string | null
           snapshot_url?: string | null
           status?: string
           user_id?: string
           verified_at?: string | null
+          video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "visitors_matched_person_id_fkey"
+            columns: ["matched_person_id"]
+            isOneToOne: false
+            referencedRelation: "verified_persons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
