@@ -19,7 +19,7 @@ export function useActions() {
       actionType: ActionType;
       visitorId?: string;
       eventId?: string;
-      details?: Record<string, unknown>;
+      details?: Record<string, string | number | boolean | null>;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -30,7 +30,7 @@ export function useActions() {
           action_type: actionType,
           visitor_id: visitorId || null,
           event_id: eventId || null,
-          details: details || null,
+          details: (details as Record<string, string | number | boolean | null>) || null,
         }]);
       
       if (error) throw error;
