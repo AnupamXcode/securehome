@@ -46,25 +46,27 @@
    const [showIntruderAlert, setShowIntruderAlert] = useState(false);
    const [intruderPhoto, setIntruderPhoto] = useState<string | null>(null);
    const [currentIntruderId, setCurrentIntruderId] = useState<string | null>(null);
-   const [status, setStatus] = useState<'idle' | 'scanning' | 'verified' | 'intruder'>('idle');
- 
-   // Load models on mount
-   useEffect(() => {
-     loadModels();
-   }, [loadModels]);
- 
-   // Update verified persons in face detection
-   useEffect(() => {
-     if (verifiedPersons.length > 0) {
-       updateVerifiedPersons(
-         verifiedPersons.map(p => ({
-           id: p.id,
-           name: p.name,
-           descriptor: p.face_descriptor
-         }))
-       );
-     }
-   }, [verifiedPersons, updateVerifiedPersons]);
+  const [status, setStatus] = useState<'idle' | 'scanning' | 'verified' | 'intruder'>('idle');
+  const [autoStartAttempted, setAutoStartAttempted] = useState(false);
+
+  // Load models on mount
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
+
+  // Update verified persons in face detection
+  useEffect(() => {
+    if (verifiedPersons.length > 0) {
+      updateVerifiedPersons(
+        verifiedPersons.map(p => ({
+          id: p.id,
+          name: p.name,
+          descriptor: p.face_descriptor
+        }))
+      );
+    }
+  }, [verifiedPersons, updateVerifiedPersons]);
+
  
   // Combined start camera + detect in one tap
   const handleStartAndVerify = useCallback(async () => {
@@ -149,6 +151,18 @@
       setIsDetecting(false);
     }
   }, [videoRef, isStreaming, isModelLoaded, startCamera, detectFace, capturePhoto, startRecording, stopRecording, stopCamera, onAccessGranted, logIntruder]);
+
+  // Auto-start camera and verification when models are loaded
+  useEffect(() => {
+    if (isModelLoaded && !autoStartAttempted && !isStreaming && status === 'idle') {
+      setAutoStartAttempted(true);
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        handleStartAndVerify();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isModelLoaded, autoStartAttempted, isStreaming, status, handleStartAndVerify]);
  
    const handleIntruderAlertClose = () => {
      setShowIntruderAlert(false);
