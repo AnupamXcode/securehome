@@ -66,80 +66,89 @@
      }
    }, [verifiedPersons, updateVerifiedPersons]);
  
-   const handleDetect = useCallback(async () => {
-     if (!videoRef.current || !isStreaming || !isModelLoaded) return;
-     
-     setIsDetecting(true);
-     setStatus('scanning');
-     setDetectionResult(null);
-     
-     // Start recording for potential intruder
-     startRecording();
-     
-     try {
-       // Run face detection
-       const result = await detectFace(videoRef.current);
-       
-       if (!result) {
-         setStatus('idle');
-         setIsDetecting(false);
-         stopRecording();
-         return;
-       }
-       
-       setDetectionResult(result);
-       
-       if (result.isVerified) {
-         setStatus('verified');
-         stopRecording();
-         
-         // Grant access after short delay
-         setTimeout(() => {
-           stopCamera();
-           onAccessGranted();
-         }, 1500);
-       } else {
-         setStatus('intruder');
-         
-         // Capture photo
-         const photoDataUrl = capturePhoto();
-         setIntruderPhoto(photoDataUrl);
-         
-         // Wait 5 seconds to capture video
-         setTimeout(async () => {
-           const videoBlob = await stopRecording();
-           
-           // Convert photo to blob
-           let photoBlob: Blob | null = null;
-           if (photoDataUrl) {
-             const response = await fetch(photoDataUrl);
-             photoBlob = await response.blob();
-           }
-           
-           // Log intruder
-           if (photoBlob) {
-             const logResult = await logIntruder({
-               photoBlob,
-               videoBlob: videoBlob || undefined,
-               descriptor: result.descriptor || undefined
-             });
-             
-             // Get the intruder log ID for action tracking
-             // We'd need to return the ID from logIntruder for this
-           }
-           
-           // Show intruder alert dialog
-           setShowIntruderAlert(true);
-         }, 5000);
-       }
-     } catch (err) {
-       console.error('Detection error:', err);
-       setStatus('idle');
-       stopRecording();
-     } finally {
-       setIsDetecting(false);
-     }
-   }, [videoRef, isStreaming, isModelLoaded, detectFace, capturePhoto, startRecording, stopRecording, stopCamera, onAccessGranted, logIntruder]);
+  // Combined start camera + detect in one tap
+  const handleStartAndVerify = useCallback(async () => {
+    if (!isModelLoaded) return;
+    
+    // Clear any previous errors
+    
+    try {
+      // Start camera if not already streaming
+      if (!isStreaming) {
+        await startCamera();
+        // Wait for video to be ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      if (!videoRef.current) return;
+      
+      setIsDetecting(true);
+      setStatus('scanning');
+      setDetectionResult(null);
+      
+      // Start recording for potential intruder
+      startRecording();
+      
+      // Run face detection
+      const result = await detectFace(videoRef.current);
+      
+      if (!result) {
+        setStatus('idle');
+        setIsDetecting(false);
+        stopRecording();
+        return;
+      }
+      
+      setDetectionResult(result);
+      
+      if (result.isVerified) {
+        setStatus('verified');
+        stopRecording();
+        
+        // Grant access after short delay
+        setTimeout(() => {
+          stopCamera();
+          onAccessGranted();
+        }, 1500);
+      } else {
+        setStatus('intruder');
+        
+        // Capture photo
+        const photoDataUrl = capturePhoto();
+        setIntruderPhoto(photoDataUrl);
+        
+        // Wait 5 seconds to capture video
+        setTimeout(async () => {
+          const videoBlob = await stopRecording();
+          
+          // Convert photo to blob
+          let photoBlob: Blob | null = null;
+          if (photoDataUrl) {
+            const response = await fetch(photoDataUrl);
+            photoBlob = await response.blob();
+          }
+          
+          // Log intruder
+          if (photoBlob) {
+            await logIntruder({
+              photoBlob,
+              videoBlob: videoBlob || undefined,
+              descriptor: result.descriptor || undefined
+            });
+          }
+          
+          // Show intruder alert dialog
+          setShowIntruderAlert(true);
+        }, 5000);
+      }
+    } catch (err) {
+      console.error('Detection error:', err);
+      setStatus('idle');
+      stopRecording();
+    } finally {
+      setIsDetecting(false);
+    }
+  }, [videoRef, isStreaming, isModelLoaded, startCamera, detectFace, capturePhoto, startRecording, stopRecording, stopCamera, onAccessGranted, logIntruder]);
  
    const handleIntruderAlertClose = () => {
      setShowIntruderAlert(false);
@@ -247,38 +256,40 @@
              </div>
            )}
            
-           {/* Action Buttons */}
-           <div className="flex gap-3">
-             {!isStreaming ? (
-               <Button 
-                 className="flex-1" 
-                 onClick={startCamera}
-                 disabled={modelsLoading}
-               >
-                 <Camera className="h-4 w-4 mr-2" />
-                 Start Camera
-               </Button>
-             ) : (
-               <>
-                 <Button
-                   variant="outline"
-                   className="flex-1"
-                   onClick={stopCamera}
-                   disabled={isDetecting}
-                 >
-                   Stop
-                 </Button>
-                 <Button
-                   className="flex-1 gradient-primary"
-                   onClick={handleDetect}
-                   disabled={!isModelLoaded || isDetecting || status !== 'idle'}
-                 >
-                   <Scan className="h-4 w-4 mr-2" />
-                   {isDetecting ? 'Detecting...' : 'Detect'}
-                 </Button>
-               </>
-             )}
-           </div>
+            {/* Single Verify Button */}
+            <Button
+              className="w-full h-14 text-lg gradient-primary"
+              onClick={handleStartAndVerify}
+              disabled={!isModelLoaded || modelsLoading || isDetecting || status !== 'idle'}
+            >
+              {modelsLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Loading AI Models...
+                </>
+              ) : isDetecting ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <Scan className="h-5 w-5 mr-2" />
+                  Tap to Verify
+                </>
+              )}
+            </Button>
+            
+            {/* Stop button only when camera is active */}
+            {isStreaming && status === 'idle' && !isDetecting && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={stopCamera}
+              >
+                Stop Camera
+              </Button>
+            )}
            
            {/* Skip link for development */}
            <Button
