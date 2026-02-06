@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
+import { useCameraContext } from '@/hooks/useCameraContext';
 import { toast } from 'sonner';
 
 export default function Auth() {
@@ -16,6 +17,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  const { startCamera } = useCameraContext();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,6 +36,9 @@ export default function Auth() {
           return;
         }
         toast.success('Welcome back!');
+        
+        // Start camera within the same click gesture context
+        await startCamera();
         navigate('/');
       } else {
         if (password.length < 6) {
@@ -50,6 +55,9 @@ export default function Auth() {
           return;
         }
         toast.success('Account created! Welcome to SecureHome.');
+        
+        // Start camera within the same click gesture context
+        await startCamera();
         navigate('/');
       }
     } finally {

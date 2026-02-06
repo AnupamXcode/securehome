@@ -1,58 +1,60 @@
- import { useState, useEffect, useCallback } from 'react';
- import { useNavigate } from 'react-router-dom';
- import { Camera, Scan, Shield, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
- import { Button } from '@/components/ui/button';
- import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
- import { useCamera } from '@/hooks/useCamera';
- import { useFaceDetection, FaceDetectionResult } from '@/hooks/useFaceDetection';
- import { useVerifiedPersons } from '@/hooks/useVerifiedPersons';
- import { useIntruderLogs } from '@/hooks/useIntruderLogs';
- import { IntruderAlertDialog } from './IntruderAlertDialog';
- import { cn } from '@/lib/utils';
- 
- interface FaceDetectionScreenProps {
-   onAccessGranted: () => void;
- }
- 
- export function FaceDetectionScreen({ onAccessGranted }: FaceDetectionScreenProps) {
-   const navigate = useNavigate();
-   const { 
-     videoRef, 
-     canvasRef, 
-     isStreaming, 
-     error: cameraError,
-     startCamera, 
-     stopCamera,
-     capturePhoto,
-     startRecording,
-     stopRecording,
-     isRecording
-   } = useCamera();
-   
-   const {
-     isModelLoaded,
-     isLoading: modelsLoading,
-     error: modelError,
-     loadModels,
-     detectFace,
-     updateVerifiedPersons
-   } = useFaceDetection();
-   
-   const { verifiedPersons } = useVerifiedPersons();
-   const { logIntruder } = useIntruderLogs();
-   
-   const [isDetecting, setIsDetecting] = useState(false);
-   const [detectionResult, setDetectionResult] = useState<FaceDetectionResult | null>(null);
-   const [showIntruderAlert, setShowIntruderAlert] = useState(false);
-   const [intruderPhoto, setIntruderPhoto] = useState<string | null>(null);
-   const [currentIntruderId, setCurrentIntruderId] = useState<string | null>(null);
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Camera, Scan, Shield, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCameraContext } from '@/hooks/useCameraContext';
+import { useFaceDetection, FaceDetectionResult } from '@/hooks/useFaceDetection';
+import { useVerifiedPersons } from '@/hooks/useVerifiedPersons';
+import { useIntruderLogs } from '@/hooks/useIntruderLogs';
+import { IntruderAlertDialog } from './IntruderAlertDialog';
+import { cn } from '@/lib/utils';
+
+interface FaceDetectionScreenProps {
+  onAccessGranted: () => void;
+}
+
+export function FaceDetectionScreen({ onAccessGranted }: FaceDetectionScreenProps) {
+  const navigate = useNavigate();
+  const { stream, isStreaming, error: cameraError, startCamera, stopCamera } = useCameraContext();
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  
+  const {
+    isModelLoaded,
+    isLoading: modelsLoading,
+    error: modelError,
+    loadModels,
+    detectFace,
+    updateVerifiedPersons
+  } = useFaceDetection();
+  
+  const { verifiedPersons } = useVerifiedPersons();
+  const { logIntruder } = useIntruderLogs();
+  
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectionResult, setDetectionResult] = useState<FaceDetectionResult | null>(null);
+  const [showIntruderAlert, setShowIntruderAlert] = useState(false);
+  const [intruderPhoto, setIntruderPhoto] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'scanning' | 'verified' | 'intruder'>('idle');
-  const [autoStartAttempted, setAutoStartAttempted] = useState(false);
+  const [autoVerifyTriggered, setAutoVerifyTriggered] = useState(false);
 
   // Load models on mount
   useEffect(() => {
     loadModels();
   }, [loadModels]);
+
+  // Attach stream to video element when available
+  useEffect(() => {
+    if (stream && videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [stream]);
 
   // Update verified persons in face detection
   useEffect(() => {
@@ -67,30 +69,73 @@
     }
   }, [verifiedPersons, updateVerifiedPersons]);
 
- 
-  // Combined start camera + detect in one tap
-  const handleStartAndVerify = useCallback(async () => {
-    if (!isModelLoaded) return;
+  // Recording helpers
+  const startRecording = useCallback(() => {
+    if (!stream) return;
     
-    // Clear any previous errors
+    recordedChunksRef.current = [];
     
-    try {
-      // Start camera if not already streaming
-      if (!isStreaming) {
-        await startCamera();
-        // Wait for video to be ready
-        await new Promise(resolve => setTimeout(resolve, 500));
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9'
+    });
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordedChunksRef.current.push(event.data);
+      }
+    };
+    
+    mediaRecorderRef.current = mediaRecorder;
+    mediaRecorder.start(100);
+    setIsRecording(true);
+  }, [stream]);
+
+  const stopRecording = useCallback(async (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      if (!mediaRecorderRef.current) {
+        resolve(null);
+        return;
       }
       
-      if (!videoRef.current) return;
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        recordedChunksRef.current = [];
+        setIsRecording(false);
+        resolve(blob);
+      };
       
-      setIsDetecting(true);
-      setStatus('scanning');
-      setDetectionResult(null);
-      
-      // Start recording for potential intruder
-      startRecording();
-      
+      mediaRecorderRef.current.stop();
+    });
+  }, []);
+
+  const capturePhoto = useCallback((): string | null => {
+    if (!videoRef.current || !canvasRef.current) return null;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    
+    if (!context) return null;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+    
+    return canvas.toDataURL('image/jpeg', 0.8);
+  }, []);
+
+  // Run verification
+  const runVerification = useCallback(async () => {
+    if (!isModelLoaded || !videoRef.current || !isStreaming) return;
+    
+    setIsDetecting(true);
+    setStatus('scanning');
+    setDetectionResult(null);
+    
+    // Start recording for potential intruder
+    startRecording();
+    
+    try {
       // Run face detection
       const result = await detectFace(videoRef.current);
       
@@ -150,19 +195,36 @@
     } finally {
       setIsDetecting(false);
     }
-  }, [videoRef, isStreaming, isModelLoaded, startCamera, detectFace, capturePhoto, startRecording, stopRecording, stopCamera, onAccessGranted, logIntruder]);
+  }, [isModelLoaded, isStreaming, detectFace, capturePhoto, startRecording, stopRecording, stopCamera, onAccessGranted, logIntruder]);
 
-  // Auto-start camera and verification when models are loaded
+  // Manual start + verify (fallback button)
+  const handleStartAndVerify = useCallback(async () => {
+    if (!isModelLoaded) return;
+    
+    try {
+      if (!isStreaming) {
+        await startCamera();
+        // Wait for stream to be ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      runVerification();
+    } catch (err) {
+      console.error('Start and verify error:', err);
+    }
+  }, [isModelLoaded, isStreaming, startCamera, runVerification]);
+
+  // AUTO-START: When camera is already streaming (from login) and models are loaded
   useEffect(() => {
-    if (isModelLoaded && !autoStartAttempted && !isStreaming && status === 'idle') {
-      setAutoStartAttempted(true);
-      // Small delay to ensure component is fully mounted
+    if (isStreaming && isModelLoaded && !autoVerifyTriggered && status === 'idle' && !isDetecting) {
+      setAutoVerifyTriggered(true);
+      // Small delay to ensure video element is attached
       const timer = setTimeout(() => {
-        handleStartAndVerify();
-      }, 100);
+        runVerification();
+      }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isModelLoaded, autoStartAttempted, isStreaming, status, handleStartAndVerify]);
+  }, [isStreaming, isModelLoaded, autoVerifyTriggered, status, isDetecting, runVerification]);
  
    const handleIntruderAlertClose = () => {
      setShowIntruderAlert(false);
