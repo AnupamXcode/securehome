@@ -3,68 +3,40 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Bell, AlertTriangle, Camera, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useVisitors, Visitor } from '@/hooks/useVisitors';
 import { ActionPanel } from '@/components/security/ActionPanel';
+import { Header } from '@/components/layout/Header';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { cn } from '@/lib/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function Alerts() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { visitors, isLoading } = useVisitors();
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
-
-  // Only show unverified visitors as alerts
   const alerts = visitors.filter(v => v.status === 'unverified');
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
+    if (!loading && !user) navigate('/auth');
   }, [user, loading, navigate]);
 
-  if (loading || !user) {
-    return null;
-  }
+  if (loading || !user) return null;
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-border/50">
-        <div className="container px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2">
-                <Bell className="h-5 w-5 text-warning" />
-                Alerts
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {alerts.length} unverified {alerts.length === 1 ? 'visitor' : 'visitors'}
-              </p>
-            </div>
-            {alerts.length > 0 && (
-              <div className="h-3 w-3 rounded-full bg-warning animate-pulse-glow" />
-            )}
-          </div>
-        </div>
-      </header>
+      <Header title="Alerts" icon={<Bell className="h-5 w-5 text-warning" />}>
+        {alerts.length > 0 && (
+          <span className="bg-warning text-warning-foreground text-xs font-bold px-2 py-0.5 rounded-full">{alerts.length}</span>
+        )}
+      </Header>
 
-      {/* Alert List */}
       <main className="container px-4 py-4">
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <Card key={i} className="border-border/50 animate-pulse">
-                <CardContent className="p-4 h-32" />
-              </Card>
+              <Card key={i} className="border-border/50 animate-pulse"><CardContent className="p-4 h-32" /></Card>
             ))}
           </div>
         ) : alerts.length === 0 ? (
@@ -76,24 +48,18 @@ export default function Alerts() {
         ) : (
           <div className="space-y-3">
             {alerts.map((alert) => (
-              <Card 
-                key={alert.id} 
-                className="border-warning/30 bg-warning/5 cursor-pointer hover:bg-warning/10 transition-colors animate-slide-up"
+              <Card
+                key={alert.id}
+                className="border-warning/30 bg-warning/5 cursor-pointer hover:bg-warning/10 transition-all"
                 onClick={() => setSelectedVisitor(alert)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <div className="relative">
                       {alert.snapshot_url ? (
-                        <img
-                          src={alert.snapshot_url}
-                          alt="Alert snapshot"
-                          className="h-20 w-20 rounded-lg object-cover"
-                        />
+                        <img src={alert.snapshot_url} alt="Alert" className="h-20 w-20 rounded-lg object-cover" />
                       ) : (
-                        <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center">
-                          <Camera className="h-8 w-8 text-muted-foreground" />
-                        </div>
+                        <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center"><Camera className="h-8 w-8 text-muted-foreground" /></div>
                       )}
                       <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-warning animate-pulse-glow" />
                     </div>
@@ -103,13 +69,11 @@ export default function Alerts() {
                         <span className="font-semibold text-warning">Unverified Visitor</span>
                       </div>
                       <p className="text-sm font-medium">{alert.entry_point}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground font-mono">
                         {format(new Date(alert.detected_at), 'h:mm a')} • {formatDistanceToNow(new Date(alert.detected_at), { addSuffix: true })}
                       </p>
                     </div>
                   </div>
-                  
-                  {/* Quick Actions */}
                   <div className="mt-4">
                     <ActionPanel visitorId={alert.id} compact />
                   </div>
@@ -120,35 +84,16 @@ export default function Alerts() {
         )}
       </main>
 
-      {/* Alert Detail Dialog */}
       <Dialog open={!!selectedVisitor} onOpenChange={() => setSelectedVisitor(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-warning">
-              <AlertTriangle className="h-5 w-5" />
-              Alert: {selectedVisitor?.entry_point}
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-warning"><AlertTriangle className="h-5 w-5" /> Alert: {selectedVisitor?.entry_point}</DialogTitle>
           </DialogHeader>
-          
-          {selectedVisitor?.snapshot_url && (
-            <img
-              src={selectedVisitor.snapshot_url}
-              alt="Alert snapshot"
-              className="w-full aspect-video object-cover rounded-lg"
-            />
-          )}
-          
+          {selectedVisitor?.snapshot_url && <img src={selectedVisitor.snapshot_url} alt="Alert" className="w-full aspect-video object-cover rounded-lg" />}
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Detected</span>
-              <span>{selectedVisitor && format(new Date(selectedVisitor.detected_at), 'PPp')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Location</span>
-              <span>{selectedVisitor?.entry_point}</span>
-            </div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Detected</span><span className="font-mono">{selectedVisitor && format(new Date(selectedVisitor.detected_at), 'PPp')}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span>{selectedVisitor?.entry_point}</span></div>
           </div>
-
           <ActionPanel visitorId={selectedVisitor?.id} />
         </DialogContent>
       </Dialog>
