@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CameraProvider } from "@/hooks/useCameraContext";
+import { ThemeProvider } from "@/hooks/useTheme";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import FaceDetection from "./pages/FaceDetection";
@@ -18,27 +19,29 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CameraProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<FaceDetection />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/detect" element={<FaceDetection />} />
-              <Route path="/visitors" element={<Visitors />} />
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/intruders" element={<Intruders />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CameraProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <CameraProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<FaceDetection />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/detect" element={<FaceDetection />} />
+                <Route path="/visitors" element={<Visitors />} />
+                <Route path="/alerts" element={<Alerts />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/intruders" element={<Intruders />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CameraProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
