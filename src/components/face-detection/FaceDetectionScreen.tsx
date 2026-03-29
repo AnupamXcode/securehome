@@ -249,10 +249,10 @@ export function FaceDetectionScreen({ onAccessGranted }: FaceDetectionScreenProp
            <div className="mx-auto mb-4 p-3 rounded-2xl gradient-primary">
              <Shield className="h-8 w-8 text-primary-foreground" />
            </div>
-           <CardTitle className="text-2xl">Face Verification</CardTitle>
-           <p className="text-muted-foreground text-sm mt-2">
-             Position your face in the frame and click Detect
-           </p>
+            <CardTitle className="text-2xl">Secure Home</CardTitle>
+            <p className="text-muted-foreground text-sm mt-2">
+              AI-powered face verification
+            </p>
          </CardHeader>
          
          <CardContent className="space-y-4">
