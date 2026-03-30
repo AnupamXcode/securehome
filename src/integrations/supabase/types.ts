@@ -143,6 +143,33 @@ export type Database = {
         }
         Relationships: []
       }
+      login_history: {
+        Row: {
+          device_info: string | null
+          email: string | null
+          id: string
+          logged_in_at: string
+          name: string | null
+          user_id: string
+        }
+        Insert: {
+          device_info?: string | null
+          email?: string | null
+          id?: string
+          logged_in_at?: string
+          name?: string | null
+          user_id: string
+        }
+        Update: {
+          device_info?: string | null
+          email?: string | null
+          id?: string
+          logged_in_at?: string
+          name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           alerts_enabled: boolean
