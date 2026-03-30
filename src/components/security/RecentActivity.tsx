@@ -1,6 +1,7 @@
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { Camera, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useVisitors } from '@/hooks/useVisitors';
 import { cn } from '@/lib/utils';
 
@@ -41,46 +42,43 @@ export function RecentActivity() {
   }
 
   return (
-    <Card className="border-border/50">
+    <Card className="border-border/50 hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Recent Activity</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {recentVisitors.map((visitor) => (
           <div
             key={visitor.id}
-            className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 animate-slide-up"
+            className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/60 transition-colors duration-200"
           >
-            {visitor.snapshot_url ? (
-              <img
-                src={visitor.snapshot_url}
-                alt="Detection snapshot"
-                className="h-12 w-12 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                <Camera className="h-5 w-5 text-muted-foreground" />
-              </div>
-            )}
+            <div className="relative">
+              <Avatar className="h-11 w-11 border-2 border-border">
+                <AvatarImage src={visitor.snapshot_url || ''} alt="Visitor" />
+                <AvatarFallback><Camera className="h-4 w-4 text-muted-foreground" /></AvatarFallback>
+              </Avatar>
+              <div className={cn(
+                "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background",
+                visitor.status === 'verified' ? 'bg-success' : 'bg-warning'
+              )} />
+            </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {visitor.status === 'verified' ? (
-                  <CheckCircle className="h-4 w-4 text-success" />
+                  <CheckCircle className="h-3.5 w-3.5 text-success shrink-0" />
                 ) : (
-                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
                 )}
-                <span className="font-medium truncate">
-                  {visitor.entry_point}
-                </span>
+                <span className="font-medium text-sm truncate">{visitor.entry_point}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(visitor.detected_at), { addSuffix: true })}
+                {format(new Date(visitor.detected_at), 'h:mm a')} · {formatDistanceToNow(new Date(visitor.detected_at), { addSuffix: true })}
               </p>
             </div>
             <span className={cn(
-              "px-2 py-1 rounded-full text-xs font-medium",
-              visitor.status === 'verified' 
-                ? "bg-success/10 text-success" 
+              "px-2.5 py-1 rounded-full text-xs font-semibold capitalize",
+              visitor.status === 'verified'
+                ? "bg-success/10 text-success"
                 : "bg-warning/10 text-warning"
             )}>
               {visitor.status}

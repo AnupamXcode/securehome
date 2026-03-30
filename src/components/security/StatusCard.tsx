@@ -9,19 +9,22 @@ export function StatusCard() {
   if (isLoading) {
     return (
       <Card className="border-border/50 animate-pulse">
-        <CardContent className="p-6">
-          <div className="h-24 bg-muted rounded-lg" />
-        </CardContent>
+        <CardContent className="p-6"><div className="h-24 bg-muted rounded-lg" /></CardContent>
       </Card>
     );
   }
 
   return (
     <Card className={cn(
-      "border-border/50 transition-all duration-300",
-      isLocked ? "glow-success" : "glow-warning"
+      "border-2 transition-all duration-500 overflow-hidden relative",
+      isLocked ? "border-success/30 glow-success" : "border-warning/30 glow-warning"
     )}>
-      <CardContent className="p-6">
+      {/* Gradient overlay */}
+      <div className={cn(
+        "absolute inset-0 opacity-5",
+        isLocked ? "bg-gradient-to-br from-success to-transparent" : "bg-gradient-to-br from-warning to-transparent"
+      )} />
+      <CardContent className="p-6 relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className={cn(
@@ -35,18 +38,19 @@ export function StatusCard() {
               )}
             </div>
             <div>
-              <h2 className="text-2xl font-bold">
-                {isLocked ? 'Armed' : 'Disarmed'}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {isLocked ? 'Home is secure' : 'Door is unlocked'}
-              </p>
+              <h2 className="text-2xl font-bold">{isLocked ? 'Armed' : 'Disarmed'}</h2>
+              <p className="text-muted-foreground text-sm">{isLocked ? 'Home is secure' : 'Door is unlocked'}</p>
             </div>
           </div>
-          <div className={cn(
-            "h-3 w-3 rounded-full animate-pulse-glow",
-            isLocked ? "bg-success" : "bg-warning"
-          )} />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+              {isLocked ? 'Safe' : 'Alert'}
+            </span>
+            <div className={cn(
+              "h-3 w-3 rounded-full animate-pulse-glow",
+              isLocked ? "bg-success" : "bg-warning"
+            )} />
+          </div>
         </div>
       </CardContent>
     </Card>

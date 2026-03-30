@@ -72,7 +72,7 @@ export function useEvents() {
           event_type: 'motion_detected',
           entry_point: 'Main Door',
           is_demo: true,
-          snapshot_url: `https://picsum.photos/seed/${Date.now()}/400/300`,
+          snapshot_url: `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'men' : 'women'}/${Math.floor(Math.random() * 99)}.jpg`,
         })
         .select()
         .single();
