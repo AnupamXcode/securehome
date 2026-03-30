@@ -36,12 +36,20 @@ export default function Auth() {
         }
 
         // Update profile with login time
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
           await supabase.from('profiles').update({
             email: email,
             name: name || undefined,
-          }).eq('user_id', user.id);
+          }).eq('user_id', authUser.id);
+
+          // Log login history
+          await supabase.from('login_history').insert({
+            user_id: authUser.id,
+            email: email,
+            name: name || null,
+            device_info: navigator.userAgent,
+          });
         }
 
         toast.success('Welcome back!');

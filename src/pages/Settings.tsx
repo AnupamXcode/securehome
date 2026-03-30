@@ -1,22 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Settings as SettingsIcon, Bell, User, Phone, MapPin, Play, LogOut, Users, Plus, Trash2
+  Settings as SettingsIcon, Bell, User, Phone, MapPin, Play, LogOut, Users, Plus, Trash2, Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useTrustedContacts } from '@/hooks/useTrustedContacts';
 import { useEvents } from '@/hooks/useEvents';
+import { useLoginHistory } from '@/hooks/useLoginHistory';
 import { Header } from '@/components/layout/Header';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { VerifiedPersonsManager } from '@/components/face-detection';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { format } from 'date-fns';
 
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
@@ -24,6 +27,7 @@ export default function Settings() {
   const { profile, updateProfile, isUpdating } = useProfile();
   const { contacts, addContact, deleteContact, isAdding } = useTrustedContacts();
   const { createDemoEvent, isCreatingDemo } = useEvents();
+  const { history: loginHistory, isLoading: historyLoading } = useLoginHistory();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -56,6 +60,13 @@ export default function Settings() {
   const handleSignOut = async () => { await signOut(); navigate('/auth'); };
 
   if (loading || !user) return null;
+
+  function parseDevice(ua: string | null) {
+    if (!ua) return 'Unknown';
+    if (ua.includes('Mobile')) return 'Mobile';
+    if (ua.includes('Tablet')) return 'Tablet';
+    return 'Desktop';
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -111,6 +122,41 @@ export default function Settings() {
         </Card>
 
         <VerifiedPersonsManager />
+
+        {/* Login History */}
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Login History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {historyLoading ? (
+              <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-muted rounded animate-pulse" />)}</div>
+            ) : loginHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No login history yet.</p>
+            ) : (
+              <div className="overflow-x-auto -mx-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Date & Time</TableHead>
+                      <TableHead className="text-xs">Email</TableHead>
+                      <TableHead className="text-xs">Device</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loginHistory.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="text-xs whitespace-nowrap">{format(new Date(entry.logged_in_at), 'MMM d, yyyy h:mm a')}</TableCell>
+                        <TableCell className="text-xs">{entry.email || '—'}</TableCell>
+                        <TableCell className="text-xs">{parseDevice(entry.device_info)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Preferences */}
         <Card className="border-border/50">
